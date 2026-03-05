@@ -1,24 +1,24 @@
 {
-  "FileVersion": 3,
-  "EngineAssociation": "5.7",
-  "Category": "Games",
-  "Description": "rootedunreal - single player billiards project",
-  "Plugins": [
-    {
-      "Name": "EnhancedInput",
-      "Enabled": true
-    },
-    {
-      "Name": "Interchange",
-      "Enabled": false
-    },
-    {
-      "Name": "InterchangeEditor",
-      "Enabled": false
-    },
-    {
-      "Name": "UnrealMCP",
-      "Enabled": true
-    }
-  ]
+	"FileVersion": 3,
+	"EngineAssociation": "3AB5D917-0BB7-4FE8-ABDA-8D8BFF464534",
+	"Category": "Games",
+	"Description": "rootedunreal - single player billiards project",
+	"Plugins": [
+		{
+			"Name": "EnhancedInput",
+			"Enabled": true
+		},
+		{
+			"Name": "Interchange",
+			"Enabled": false
+		},
+		{
+			"Name": "InterchangeEditor",
+			"Enabled": false
+		},
+		{
+			"Name": "UnrealMCP",
+			"Enabled": true
+		}
+	]
 }

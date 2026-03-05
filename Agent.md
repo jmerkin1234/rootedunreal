@@ -81,6 +81,20 @@
   - Pockets: no collision.
   - Table base/frame: no collision.
 
+### Section 4 (Physical Materials)
+- [x] **4.2 PM_Felt created**
+  - `Friction=0.20`, `StaticFriction=0.22`, `Restitution=0.0`
+- [x] **4.3 PM_Cushion created**
+  - `Friction=0.05`, `StaticFriction=0.05`, `Restitution=0.65`
+- [x] **4.4 PM_Ball created**
+  - `Friction=0.04`, `StaticFriction=0.04`, `Restitution=0.65`, `Density=1700`
+
+### Section 5 (Custom Collision Channel)
+- [x] **5.1 BallCollision trace channel added in project config**
+  - `DefaultResponse=Ignore`
+- [ ] **5.2 Component response wiring pending**
+  - BP_Ball response to `BallCollision=Block` will be applied when BP_Ball is created in later guide steps.
+
 ## MCP Status
 - UnrealMCP plugin installed at:
   - `/home/justin/UnrealEngine/rootedunreal/Plugins/UnrealMCP`
@@ -89,8 +103,8 @@
 - Operating rule: keep MCP calls paced (single call, wait for completion).
 
 ## Current Phase Gate
-- Section 3 is complete and verified.
-- Next step: continue with the next guide section after mesh/material pipeline checks.
+- Sections 3, 4, and 5.1 are complete.
+- Next strict-order step: Section 6 (create all required enums).
 
 ## Change Log
 ### 2026-03-05
@@ -103,6 +117,8 @@
 - Cleaned and re-imported cushion meshes after detecting an Interchange-path import attempt.
 - Verified UCX collisions on cushions with updated convex-aware validator.
 - Applied and verified Section 3.4 collision rules across imported meshes.
+- Created all Section 4 physical materials with target values.
+- Added Section 5.1 `BallCollision` custom trace channel to project config.
 - Pushed project state to GitHub `main` at commit `446946a`.
 - Removed open-level `Landscape` and all `LandscapeStreamingProxy` actors via MCP cleanup pass.
 
@@ -121,7 +137,8 @@
   - MCP heartbeat succeeded (`get_actors_in_level`).
   - No `Uncontrolled asset discovery` entries found in current `Saved/Logs/rootedunreal.log` after disabling uncontrolled changelists.
 - 2026-03-05 (user direction lock):
-  - Follow guide strictly in order; do not skip steps.
+  - Follow the entire guide in exact written order (all steps), no reordering.
+  - Do not skip or front-run any step; complete and verify each step before the next.
   - Do not use Interchange importer for FBX in this project.
   - Split multi-step operations into small units (one import/action at a time) with verification between each step.
   - Keep MCP pace low (single action, wait for completion).
@@ -133,6 +150,13 @@
     - `no collision: Pool_Table_table_base`
     - `no collision: Pool_Table_table_frame`
     - `post-import collision setup complete; touched=26`
+- 2026-03-05 (Section 4 execution and verification):
+  - Material creation runner: `/unrealengine/tools/create_phase1_physical_materials.py`
+  - Verification log: `/tmp/rootedunreal_phase1_pm.log`
+  - Verified created assets:
+    - `/Game/Billiards/Physics/PM_Felt`
+    - `/Game/Billiards/Physics/PM_Cushion`
+    - `/Game/Billiards/Physics/PM_Ball`
 - 2026-03-05 (live editor cleanup):
   - MCP `find_actors_by_name("Landscape")` initially returned `Landscape` + 64 `LandscapeStreamingProxy` actors.
   - Deleted all landscape actors.
