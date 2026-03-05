@@ -2,5 +2,15 @@
   "FileVersion": 3,
   "EngineAssociation": "5.7",
   "Category": "Games",
-  "Description": "rootedunreal - single player billiards project"
+  "Description": "rootedunreal - single player billiards project",
+  "Plugins": [
+    {
+      "Name": "Interchange",
+      "Enabled": false
+    },
+    {
+      "Name": "InterchangeEditor",
+      "Enabled": false
+    }
+  ]
 }
