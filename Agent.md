@@ -19,6 +19,14 @@
 - Branch: `main`
 - Remote `origin`: `git@github.com:jmerkin1234/rootedunreal.git`
 
+## Guide Section Status
+- [x] **2.1 Create the Project**: converted to C++ project layout (module + target files under `Source/`).
+- [x] **2.2 Project Settings**: physics/framerate values applied in `Config/DefaultEngine.ini`.
+- [x] **2.3 Content Browser Folder Structure**: created under `Content/Billiards/`:
+  - `Meshes`, `Materials`, `Instances`, `Physics`
+  - `Blueprints/Actors`, `Blueprints/GameMode`, `Blueprints/AI`
+  - `UI`, `Enums`, `Levels`, `DataAssets`, `Sounds`, `VFX`
+
 ## Setup Checklist (Guide-Aligned)
 - [x] Create project as C++ (module + targets under `Source/`)
 - [x] Disable starter content baseline (project scaffold only)
@@ -75,6 +83,7 @@ Update this file after each meaningful change with:
   - `rootedunreal/rootedunreal.cpp`
 - Updated `.uproject` to include runtime module and `EnhancedInput` plugin.
 - Added `Config/DefaultEditorPerProjectUserSettings.ini` with autosave interval at 5 minutes.
+- Updated status tracking to explicitly show guide section numbers 2.1, 2.2, and 2.3.
 
 ## Validation Performed
 - Confirmed guide path exists: `/home/justin/Downloads/Billiards_Game_Plan_v3.docx`.
