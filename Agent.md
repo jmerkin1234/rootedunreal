@@ -28,6 +28,9 @@
   5. `Pool_Cue.fbx`
 - Disable Interchange import plugins before importing FBX assets to preserve `UCX_` collision meshes.
 
+## Plan Progress
+- Phase 1 started: project configuration and content structure scaffolding.
+
 ## Update Rule
 Update this file after each meaningful change with:
 - Date (`YYYY-MM-DD`)
@@ -43,3 +46,6 @@ Update this file after each meaningful change with:
 - Added `README.md` and pushed branch `main` to `origin`.
 - Connected git remote: `git@github.com:jmerkin1234/rootedunreal.git`.
 - Verified Unreal MCP connectivity with successful actor queries.
+- Added `Config/DefaultEngine.ini` with SM5/GTX1080-safe renderer baseline and physics baseline.
+- Enabled fixed framerate baseline (`120.0`) for billiards determinism.
+- Created `Content/Billiards` folder structure for Meshes/Materials/Instances/Physics/Blueprints/UI/Enums/Levels/DataAssets/Sounds/VFX.
