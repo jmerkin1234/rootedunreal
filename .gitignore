@@ -3,6 +3,9 @@ Binaries/
 DerivedDataCache/
 Intermediate/
 Saved/
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+Plugins/**/Saved/
 
 # IDE/editor local state
 .vscode/
