@@ -19,10 +19,22 @@
 - Branch: `main`
 - Remote `origin`: `git@github.com:jmerkin1234/rootedunreal.git`
 
+## Setup Checklist (Guide-Aligned)
+- [x] Create project as C++ (module + targets under `Source/`)
+- [x] Disable starter content baseline (project scaffold only)
+- [x] Target desktop/linux profile in config
+- [x] Enable `EnhancedInput` plugin
+- [x] Keep Interchange plugins disabled before FBX import (`Interchange`, `InterchangeEditor`)
+- [x] Set autosave to 5 minutes (`Config/DefaultEditorPerProjectUserSettings.ini`)
+- [x] Apply physics settings from plan
+- [x] Apply fixed framerate settings from plan
+- [x] Compile-check `rootedunrealEditor` successfully
+
 ## Plan Progress
-- [x] Phase 1: apply SM5 renderer + physics baseline in `Config/DefaultEngine.ini`.
-- [x] Phase 1: create `Content/Billiards` folder scaffold.
-- [x] Phase 1: disable Interchange plugins in `rootedunreal.uproject`.
+- [x] Phase 1: SM5 renderer + physics/framerate baseline in `Config/DefaultEngine.ini`.
+- [x] Phase 1: C++ project module/target scaffolding.
+- [x] Phase 1: `Content/Billiards` folder scaffold.
+- [x] Phase 1: plugin configuration (`EnhancedInput` on, Interchange off).
 - [ ] Phase 2: import 5 FBX assets and validate cushion `UCX_` collisions.
 - [ ] Phase 2: create `PM_Felt`, `PM_Cushion`, `PM_Ball` and assign defaults.
 - [ ] Phase 3: create core enums and Blueprint class skeletons.
@@ -34,7 +46,7 @@
   3. `Pool_Table.fbx`
   4. `Pool_Balls.fbx`
   5. `Pool_Cue.fbx`
-- Disable Interchange import plugins before importing FBX assets to preserve `UCX_` collision meshes.
+- Do not import until explicit go-ahead.
 
 ## Update Rule
 Update this file after each meaningful change with:
@@ -51,14 +63,32 @@ Update this file after each meaningful change with:
 - Added `README.md` and pushed branch `main` to `origin`.
 - Connected git remote: `git@github.com:jmerkin1234/rootedunreal.git`.
 - Verified Unreal MCP connectivity with successful actor queries.
-- Added `Config/DefaultEngine.ini` with SM5/GTX1080-safe renderer baseline and physics baseline.
-- Enabled fixed framerate baseline (`120.0`) for billiards determinism.
+- Added `Config/DefaultEngine.ini` with SM5 renderer baseline and plan-aligned physics/framerate values.
+- Enabled fixed framerate (`120.0`) for determinism.
 - Created `Content/Billiards` folder structure for Meshes/Materials/Instances/Physics/Blueprints/UI/Enums/Levels/DataAssets/Sounds/VFX.
 - Added `.gitkeep` placeholders so scaffold folders are tracked.
-- Disabled `Interchange` and `InterchangeEditor` plugins in `rootedunreal.uproject` for UCX-safe FBX import workflow.
+- Added C++ project files in `Source/`:
+  - `rootedunreal.Target.cs`
+  - `rootedunrealEditor.Target.cs`
+  - `rootedunreal/rootedunreal.Build.cs`
+  - `rootedunreal/rootedunreal.h`
+  - `rootedunreal/rootedunreal.cpp`
+- Updated `.uproject` to include runtime module and `EnhancedInput` plugin.
+- Added `Config/DefaultEditorPerProjectUserSettings.ini` with autosave interval at 5 minutes.
 
 ## Validation Performed
-- Confirmed config values written in `Config/DefaultEngine.ini`.
-- Confirmed `Content/Billiards/...` directories exist.
-- Confirmed plugin files exist in this engine build: `Interchange.uplugin`, `InterchangeEditor.uplugin`.
-- Pushed commits to `origin/main`.
+- Confirmed guide path exists: `/home/justin/Downloads/Billiards_Game_Plan_v3.docx`.
+- Confirmed C++ module/target files exist in `Source/`.
+- Built editor target successfully:
+  - Command: `Build.sh rootedunrealEditor Linux Development ...`
+  - Result: `Succeeded`
+- Confirmed `Config/DefaultEngine.ini` includes requested settings:
+  - `DefaultGravityZ=-980.0`
+  - `BounceThresholdVelocity=200.0`
+  - `FrictionCombineMode=Average`
+  - `RestitutionCombineMode=Average`
+  - `MaxDepenetrationVelocity=500.0`
+  - `SolverOptions.PositionIterations=8`
+  - `SolverOptions.VelocityIterations=4`
+  - `bUseFixedFrameRate=True`
+  - `FixedFrameRate=120.0`
