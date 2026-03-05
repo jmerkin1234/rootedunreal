@@ -15,6 +15,10 @@
 - Export FBX folder (5 files): `/home/justin/Desktop/BilliardsExport`
 - Ball textures folder: `/home/justin/Desktop/billiard assets/wip`
 
+## Git
+- Branch: `main`
+- Remote `origin`: `git@github.com:jmerkin1234/rootedunreal.git`
+
 ## Import Baseline
 - FBX import order:
   1. `Pool_Cushions.fbx`
@@ -36,3 +40,6 @@ Update this file after each meaningful change with:
 - Added source references and workflow constraints in `Agent.md`.
 - Moved active repo to `/home/justin/UnrealEngine/rootedunreal`.
 - Archived previous folder to `/home/justin/UnrealEngine/rootedunreal_backup_20260305_034955` before move.
+- Added `README.md` and pushed branch `main` to `origin`.
+- Connected git remote: `git@github.com:jmerkin1234/rootedunreal.git`.
+- Verified Unreal MCP connectivity with successful actor queries.
