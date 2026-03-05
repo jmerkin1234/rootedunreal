@@ -1,5 +1,11 @@
 # rootedunreal Agent Log
 
+## Resume Token
+- CodexResumeID: `ROOTEDUNREAL-20260305-ADD17C6`
+- Branch: `phase1-step4-7`
+- Commit: `add17c6`
+- Resume from: `Section 6 — Enumerations` (strict in-order plan execution)
+
 ## Project Identity
 - Project name: `rootedunreal`
 - Project root: `/home/justin/UnrealEngine/rootedunreal`
