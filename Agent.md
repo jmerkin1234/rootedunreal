@@ -103,6 +103,8 @@
 - Cleaned and re-imported cushion meshes after detecting an Interchange-path import attempt.
 - Verified UCX collisions on cushions with updated convex-aware validator.
 - Applied and verified Section 3.4 collision rules across imported meshes.
+- Pushed project state to GitHub `main` at commit `446946a`.
+- Removed open-level `Landscape` and all `LandscapeStreamingProxy` actors via MCP cleanup pass.
 
 ## Verification Commands Used
 - Config check: `sed -n` on `Config/DefaultEngine.ini`
@@ -131,3 +133,7 @@
     - `no collision: Pool_Table_table_base`
     - `no collision: Pool_Table_table_frame`
     - `post-import collision setup complete; touched=26`
+- 2026-03-05 (live editor cleanup):
+  - MCP `find_actors_by_name("Landscape")` initially returned `Landscape` + 64 `LandscapeStreamingProxy` actors.
+  - Deleted all landscape actors.
+  - Final verification: `find_actors_by_name("Landscape")` returned `0` actors.
