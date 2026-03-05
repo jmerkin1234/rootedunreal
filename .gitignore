@@ -1,0 +1,18 @@
+# Unreal generated files/folders
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# IDE/editor local state
+.vscode/
+.idea/
+*.code-workspace
+
+# Build/log artifacts
+*.log
+*.tmp
+
+# OS clutter
+.DS_Store
+Thumbs.db
