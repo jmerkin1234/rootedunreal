@@ -2,11 +2,11 @@
 
 ## Project Identity
 - Project name: `rootedunreal`
-- Project root: `/unrealengine/rootedunreal`
-- Unreal project file: `/unrealengine/rootedunreal/rootedunreal.uproject`
+- Project root: `/home/justin/UnrealEngine/rootedunreal`
+- Unreal project file: `/home/justin/UnrealEngine/rootedunreal/rootedunreal.uproject`
 
 ## Hard Constraints
-- Build as a fresh project under `/unrealengine/rootedunreal`.
+- Build as a fresh project under `/home/justin/UnrealEngine/rootedunreal`.
 - Do not pull gameplay logic or assets from old billiards projects.
 - Use only the provided guide and provided export/texture sources.
 
@@ -32,6 +32,7 @@ Update this file after each meaningful change with:
 
 ## Change Log
 ### 2026-03-05
-- Created fresh `rootedunreal` project scaffold in `/unrealengine/rootedunreal`.
-- Added git tracking baseline and Unreal-focused `.gitignore`.
+- Created fresh `rootedunreal` project scaffold and git baseline.
 - Added source references and workflow constraints in `Agent.md`.
+- Moved active repo to `/home/justin/UnrealEngine/rootedunreal`.
+- Archived previous folder to `/home/justin/UnrealEngine/rootedunreal_backup_20260305_034955` before move.
