@@ -1,9 +1,8 @@
 # rootedunreal Agent Log
 
 ## Resume Token
-- CodexResumeID: `ROOTEDUNREAL-20260305-ADD17C6`
-- Branch: `phase1-step4-7`
-- Commit: `add17c6`
+- CodexResumeID: `ROOTEDUNREAL-20260306-8F51DEF`
+- Branch: `checkpoint/20260306-savepointf51def`
 - Resume from: `Section 3 — FBX Import Procedure` (strict in-order plan execution)
 
 ## Project Identity
@@ -26,7 +25,7 @@
 - Ball textures folder: `/home/justin/Desktop/billiard assets/wip`
 
 ## Git
-- Branch: `phase1-step4-7`
+- Branch: `checkpoint/20260306-savepoint`
 - Remote `origin`: `git@github.com:jmerkin1234/rootedunreal.git`
 
 ## Guide Verification Status
