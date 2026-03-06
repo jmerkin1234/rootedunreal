@@ -319,3 +319,18 @@
   - Export status after this gate:
     - Did NOT overwrite `/home/justin/Desktop/BilliardsExport/Pool_*.fbx` after user stop; files remain timestamped `2026-03-06 06:03`.
   - Next action is blocked pending user go-ahead to export from audited state.
+- 2026-03-06 (final audited Blender export set delivered):
+  - Re-ran full pre-export Blender audit gate before export.
+  - Exported fresh 5-file set from audited source blend and verified round-trip import baseline.
+  - Round-trip verification baseline: all 5 FBX import with `max_loc=0.0` and `max_scale_err=0.0`.
+  - Updated files in `/home/justin/Desktop/BilliardsExport` (timestamp ~18:07):
+    - `Pool_Table.fbx`
+    - `Pool_Felt.fbx`
+    - `Pool_Cushions.fbx`
+    - `Pool_Balls.fbx`
+    - `Pool_Cue.fbx`
+  - Reports copied with final set:
+    - `/home/justin/Desktop/BilliardsExport/reexport_report.json`
+    - `/home/justin/Desktop/BilliardsExport/verify_report.json`
+  - Remaining modeling caveat (non-blocking for immediate UE import/collision plan):
+    - 8 visual meshes remain non-manifold (`table_base`, `table_frame`, and 6 pocket meshes).
