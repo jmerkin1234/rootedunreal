@@ -4,7 +4,7 @@
 - CodexResumeID: `ROOTEDUNREAL-20260305-ADD17C6`
 - Branch: `phase1-step4-7`
 - Commit: `add17c6`
-- Resume from: `Section 6 — Enumerations` (strict in-order plan execution)
+- Resume from: `Section 3 — FBX Import Procedure` (strict in-order plan execution)
 
 ## Project Identity
 - Project name: `rootedunreal`
@@ -73,21 +73,14 @@
 ### Section 3 (FBX Import & Collision Setup)
 - [x] **3.1 Legacy FBX pipeline enforced**
   - Interchange stayed disabled in project plugins.
-  - Import scripts use legacy `FbxFactory` path.
-- [x] **3.2 Mesh imports completed from `/home/justin/Desktop/BilliardsExport`**
-  - `Pool_Cushions.fbx`
-  - `Pool_Felt.fbx`
-  - `Pool_Table.fbx`
-  - `Pool_Balls.fbx` (imported with `remove_degenerates=False` workaround due degenerate-poly rejection)
-  - `Pool_Cue.fbx`
-- [x] **3.3 Cushion UCX collision verified**
-  - Verified convex collision present on all six cushion meshes.
-- [x] **3.4 Post-import collision policy applied**
-  - Balls `0-15`: sphere simple collision.
-  - Cue: no collision.
-  - Felt: complex-as-simple.
-  - Pockets: no collision.
-  - Table base/frame: no collision.
+  - MCP `import_fbx` now uses safe delete-and-import flow for `replace_existing=true` (avoids UE reimport crash path).
+- [ ] **3.2 Mesh imports in strict order**
+  - Verified present right now: `Pool_Felt.fbx`, `Pool_Table.fbx` assets.
+  - Pending re-run in exact v4 order: `Pool_Cushions.fbx` → `Pool_Felt.fbx` → `Pool_Table.fbx` → `Pool_Balls.fbx` → `Pool_Cue.fbx`.
+- [ ] **3.3 Cushion UCX collision verification**
+  - Blocked until cushion meshes are imported in current pass.
+- [ ] **3.4 Post-import collision policy**
+  - To run immediately after all 5 files are imported and verified.
 
 ### Section 4 (Physical Materials)
 - [x] **4.2 PM_Felt created**
@@ -107,13 +100,14 @@
 - UnrealMCP plugin installed at:
   - `/home/justin/UnrealEngine/rootedunreal/Plugins/UnrealMCP`
 - Enabled in `.uproject` as `"UnrealMCP": true`.
-- Live connection confirmed during this session (`get_actors_in_level` success).
+- Live connection confirmed during this session (`ping` success).
 - MCP command `create_enum` is now implemented in plugin source, compiled, and verified after editor restart.
+- MCP command `import_fbx` implemented and verified for `Pool_Felt.fbx` without editor crash.
 - Operating rule: keep MCP calls paced (single call, wait for completion).
 
 ## Current Phase Gate
-- Sections 3, 4, and 5.1 are complete.
-- Next strict-order step: Section 6 (create all required enums).
+- Section 3 is active and must be completed in strict import order before proceeding.
+- Next strict-order step: Section 3.2 step 1 (`Pool_Cushions.fbx` import), then Section 3.3 UCX verification.
 
 ## Change Log
 ### 2026-03-05
@@ -172,6 +166,13 @@
   - Created from template: `/Engine/Maps/Templates/OpenWorld`
   - Landscape actors removed after template creation; billiards assets placed with `LV_` labels.
   - Level save verified (`saved=True`), actor_count=105 (template lighting/environment + placed assets).
+- 2026-03-06: Verification-first correction pass (v4 Section 3 focus).
+  - Removed Android runtime block from `Config/DefaultEngine.ini` to keep project desktop/Linux only.
+  - Patched MCP `import_fbx` to pre-delete matching destination assets when `replace_existing=true`, then clean-import with legacy `FbxFactory` settings.
+  - Live socket verification:
+    - `ping` returned `pong`.
+    - `import_fbx` on `Pool_Felt.fbx` completed without crashing the editor and recreated `Pool_Felt.uasset`.
+  - Section 3 status reset to in-progress to match current content state and strict order requirement.
 
 ## Verification Commands Used
 - Config check: `sed -n` on `Config/DefaultEngine.ini`
@@ -267,3 +268,15 @@
     - `axis_forward=-Z`, `axis_up=Y`
     - `use_selection=True`
     - `bake_space_transform=True`
+- 2026-03-06 (pre-import cleanup per user direction):
+  - Verified new FBX were exported to `/home/justin/Desktop/BilliardsExport` and had newer mtimes than UE mesh assets.
+  - Removed old imported mesh assets from `/Game/Billiards/Meshes` before any reimport.
+  - Deletion runner: `/tmp/rootedunreal_delete_old_mesh_assets.py`
+  - Deletion log: `/tmp/rootedunreal_delete_old_mesh_assets.log`
+  - Result: `target_count=32`, `deleted=32`, `failed=0`.
+  - Scope removed: all `Pool_Table_*`, `Pool_Felt`, `Pool_Cushions_*`, `Pool_Balls_ball0..15`, and `Pool_Cue` static mesh assets.
+- 2026-03-06 (live MCP level cleanup in `L_AssetPreview_Lit`):
+  - User-reported stale preview actors were still present in level despite mesh asset deletion.
+  - Found stale actor set by pattern: `StaticMeshActor_UAID_107B441A87B625C502_*` (32 actors).
+  - Deleted all 32 actors via live MCP (`delete_actor`), then verified pattern search returned zero.
+  - Verified no `LV_` actor names found via MCP search and no `LV_`-prefixed content asset paths in `Content/`.

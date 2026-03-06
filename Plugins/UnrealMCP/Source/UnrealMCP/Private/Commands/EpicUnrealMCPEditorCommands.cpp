@@ -23,6 +23,16 @@
 #include "EditorAssetLibrary.h"
 #include "Commands/EpicUnrealMCPBlueprintCommands.h"
 
+#include "AssetToolsModule.h"
+#include "AssetImportTask.h"
+#include "Factories/FbxImportUI.h"
+#include "Factories/FbxStaticMeshImportData.h"
+#include "Factories/FbxMeshImportData.h"
+#include "Factories/FbxFactory.h"
+#include "FileHelpers.h"
+#include "Misc/Paths.h"
+#include "Misc/PackageName.h"
+
 FEpicUnrealMCPEditorCommands::FEpicUnrealMCPEditorCommands()
 {
 }
@@ -54,6 +64,10 @@ TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleCommand(const FStrin
     else if (CommandType == TEXT("spawn_blueprint_actor"))
     {
         return HandleSpawnBlueprintActor(Params);
+    }
+    else if (CommandType == TEXT("import_fbx"))
+    {
+        return HandleImportFbx(Params);
     }
     
     return FEpicUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Unknown editor command: %s"), *CommandType));
@@ -298,6 +312,190 @@ TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleSetActorTransform(co
 
     // Return updated actor info
     return FEpicUnrealMCPCommonUtils::ActorToJsonObject(TargetActor, true);
+}
+
+
+TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleImportFbx(const TSharedPtr<FJsonObject>& Params)
+{
+    FString SourceFbx;
+    if (!Params->TryGetStringField(TEXT("source_fbx"), SourceFbx))
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'source_fbx' parameter"));
+    }
+
+    if (!FPaths::FileExists(SourceFbx))
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("FBX file not found: %s"), *SourceFbx));
+    }
+
+    FString DestinationPath = TEXT("/Game/Billiards/Meshes");
+    Params->TryGetStringField(TEXT("destination_path"), DestinationPath);
+
+    bool bReplaceExisting = true;
+    bool bImportMaterials = true;
+    bool bImportTextures = true;
+    bool bCombineMeshes = false;
+    bool bAutoGenerateCollision = false;
+    bool bTransformVertexToAbsolute = true;
+    bool bConvertScene = true;
+    bool bConvertSceneUnit = true;
+    float ImportUniformScale = 1.0f;
+
+    Params->TryGetBoolField(TEXT("replace_existing"), bReplaceExisting);
+    Params->TryGetBoolField(TEXT("import_materials"), bImportMaterials);
+    Params->TryGetBoolField(TEXT("import_textures"), bImportTextures);
+    Params->TryGetBoolField(TEXT("combine_meshes"), bCombineMeshes);
+    Params->TryGetBoolField(TEXT("auto_generate_collision"), bAutoGenerateCollision);
+    Params->TryGetBoolField(TEXT("transform_vertex_to_absolute"), bTransformVertexToAbsolute);
+    Params->TryGetBoolField(TEXT("convert_scene"), bConvertScene);
+    Params->TryGetBoolField(TEXT("convert_scene_unit"), bConvertSceneUnit);
+
+    double UniformScaleAsDouble = 1.0;
+    if (Params->TryGetNumberField(TEXT("import_uniform_scale"), UniformScaleAsDouble))
+    {
+        ImportUniformScale = static_cast<float>(UniformScaleAsDouble);
+    }
+
+    if (!UEditorAssetLibrary::DoesDirectoryExist(DestinationPath))
+    {
+        UEditorAssetLibrary::MakeDirectory(DestinationPath);
+    }
+
+    TArray<FString> PreDeletedAssets;
+    if (bReplaceExisting)
+    {
+        const FString SourceBaseName = FPaths::GetBaseFilename(SourceFbx);
+        const FString SourcePrefix = SourceBaseName + TEXT("_");
+        const TArray<FString> ExistingAssets = UEditorAssetLibrary::ListAssets(DestinationPath, true, false);
+
+        for (const FString& AssetPath : ExistingAssets)
+        {
+            const FString AssetName = FPackageName::ObjectPathToObjectName(AssetPath);
+            if (AssetName.Equals(SourceBaseName) || AssetName.StartsWith(SourcePrefix))
+            {
+                if (UEditorAssetLibrary::DeleteAsset(AssetPath))
+                {
+                    PreDeletedAssets.Add(AssetPath);
+                }
+            }
+        }
+    }
+
+    UFbxImportUI* ImportUI = NewObject<UFbxImportUI>();
+    ImportUI->bAutomatedImportShouldDetectType = false;
+    ImportUI->MeshTypeToImport = FBXIT_StaticMesh;
+    ImportUI->bImportMesh = true;
+    ImportUI->bImportAsSkeletal = false;
+    ImportUI->bImportAnimations = false;
+    ImportUI->bImportMaterials = bImportMaterials;
+    ImportUI->bImportTextures = bImportTextures;
+
+    if (!ImportUI->StaticMeshImportData)
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to initialize static mesh import data"));
+    }
+
+    UFbxStaticMeshImportData* SMData = ImportUI->StaticMeshImportData;
+    SMData->bBuildNanite = false;
+    SMData->bCombineMeshes = bCombineMeshes;
+    SMData->bAutoGenerateCollision = bAutoGenerateCollision;
+    SMData->NormalImportMethod = EFBXNormalImportMethod::FBXNIM_ImportNormalsAndTangents;
+    SMData->bRemoveDegenerates = true;
+    SMData->bTransformVertexToAbsolute = bTransformVertexToAbsolute;
+    SMData->bBakePivotInVertex = false;
+    SMData->ImportUniformScale = ImportUniformScale;
+    SMData->bConvertScene = bConvertScene;
+    SMData->bConvertSceneUnit = bConvertSceneUnit;
+
+    UAssetImportTask* Task = NewObject<UAssetImportTask>();
+    Task->Filename = SourceFbx;
+    Task->DestinationPath = DestinationPath;
+    Task->bAutomated = true;
+    Task->bSave = true;
+    // Avoid UE reimport code path (currently unstable for MCP automation on Linux);
+    // when replace_existing=true we pre-delete matching assets above and do a clean import.
+    Task->bReplaceExisting = false;
+    Task->bReplaceExistingSettings = false;
+    Task->Options = ImportUI;
+
+    UFbxFactory* FbxFactory = NewObject<UFbxFactory>();
+    Task->Factory = FbxFactory;
+
+    TArray<UAssetImportTask*> Tasks;
+    Tasks.Add(Task);
+
+    FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
+    AssetToolsModule.Get().ImportAssetTasks(Tasks);
+
+    FEditorFileUtils::SaveDirtyPackages(false, true, true, false, false, false);
+
+    TSet<FString> ImportedPaths;
+    const TArray<UObject*> ImportedObjects = Task->GetObjects();
+    for (UObject* ImportedObject : ImportedObjects)
+    {
+        if (ImportedObject)
+        {
+            ImportedPaths.Add(ImportedObject->GetPathName());
+        }
+    }
+
+    // Some automated imports can return null object handles even when assets were created.
+    if (ImportedPaths.Num() == 0)
+    {
+        const FString SourceBaseName = FPaths::GetBaseFilename(SourceFbx);
+        const FString SourcePrefix = SourceBaseName + TEXT("_");
+        const TArray<FString> PostImportAssets = UEditorAssetLibrary::ListAssets(DestinationPath, true, false);
+
+        for (const FString& AssetPath : PostImportAssets)
+        {
+            const FString AssetName = FPackageName::ObjectPathToObjectName(AssetPath);
+            if (AssetName.Equals(SourceBaseName) || AssetName.StartsWith(SourcePrefix))
+            {
+                ImportedPaths.Add(AssetPath);
+            }
+        }
+    }
+
+    if (ImportedPaths.Num() == 0)
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Import completed with zero imported objects"));
+    }
+
+    TArray<FString> ImportedPathsSorted = ImportedPaths.Array();
+    ImportedPathsSorted.Sort();
+
+    TArray<TSharedPtr<FJsonValue>> ImportedArray;
+    for (const FString& ImportedPath : ImportedPathsSorted)
+    {
+        ImportedArray.Add(MakeShared<FJsonValueString>(ImportedPath));
+    }
+
+    TArray<TSharedPtr<FJsonValue>> PreDeletedArray;
+    for (const FString& AssetPath : PreDeletedAssets)
+    {
+        PreDeletedArray.Add(MakeShared<FJsonValueString>(AssetPath));
+    }
+
+    TSharedPtr<FJsonObject> SettingsObj = MakeShared<FJsonObject>();
+    SettingsObj->SetBoolField(TEXT("replace_existing"), bReplaceExisting);
+    SettingsObj->SetBoolField(TEXT("import_materials"), bImportMaterials);
+    SettingsObj->SetBoolField(TEXT("import_textures"), bImportTextures);
+    SettingsObj->SetBoolField(TEXT("combine_meshes"), bCombineMeshes);
+    SettingsObj->SetBoolField(TEXT("auto_generate_collision"), bAutoGenerateCollision);
+    SettingsObj->SetBoolField(TEXT("transform_vertex_to_absolute"), bTransformVertexToAbsolute);
+    SettingsObj->SetBoolField(TEXT("convert_scene"), bConvertScene);
+    SettingsObj->SetBoolField(TEXT("convert_scene_unit"), bConvertSceneUnit);
+    SettingsObj->SetNumberField(TEXT("import_uniform_scale"), ImportUniformScale);
+
+    TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+    ResultObj->SetStringField(TEXT("source_fbx"), SourceFbx);
+    ResultObj->SetStringField(TEXT("destination_path"), DestinationPath);
+    ResultObj->SetNumberField(TEXT("imported_count"), ImportedArray.Num());
+    ResultObj->SetArrayField(TEXT("imported_object_paths"), ImportedArray);
+    ResultObj->SetArrayField(TEXT("pre_deleted_asset_paths"), PreDeletedArray);
+    ResultObj->SetObjectField(TEXT("settings"), SettingsObj);
+
+    return ResultObj;
 }
 
 TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleSpawnBlueprintActor(const TSharedPtr<FJsonObject>& Params)
