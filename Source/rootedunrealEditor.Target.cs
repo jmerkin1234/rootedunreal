@@ -1,0 +1,14 @@
+using UnrealBuildTool;
+using System.Collections.Generic;
+
+public class rootedunrealEditorTarget : TargetRules
+{
+    public rootedunrealEditorTarget(TargetInfo Target) : base(Target)
+    {
+        Type = TargetType.Editor;
+        DefaultBuildSettings = BuildSettingsVersion.V6;
+        IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
+
+        ExtraModuleNames.Add("rootedunreal");
+    }
+}
