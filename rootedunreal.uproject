@@ -3,6 +3,13 @@
 	"EngineAssociation": "3AB5D917-0BB7-4FE8-ABDA-8D8BFF464534",
 	"Category": "Games",
 	"Description": "rootedunreal - single player billiards project",
+	"Modules": [
+		{
+			"Name": "rootedunreal",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
 	"Plugins": [
 		{
 			"Name": "EnhancedInput",

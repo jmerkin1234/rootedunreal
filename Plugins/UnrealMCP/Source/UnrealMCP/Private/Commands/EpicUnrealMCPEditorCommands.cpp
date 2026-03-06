@@ -37,6 +37,34 @@ FEpicUnrealMCPEditorCommands::FEpicUnrealMCPEditorCommands()
 {
 }
 
+namespace
+{
+    AActor* FindActorByNameOrLabel(UWorld* World, const FString& NameOrLabel)
+    {
+        if (!World)
+        {
+            return nullptr;
+        }
+
+        TArray<AActor*> AllActors;
+        UGameplayStatics::GetAllActorsOfClass(World, AActor::StaticClass(), AllActors);
+        for (AActor* Actor : AllActors)
+        {
+            if (!Actor)
+            {
+                continue;
+            }
+
+            if (Actor->GetName() == NameOrLabel || Actor->GetActorLabel() == NameOrLabel)
+            {
+                return Actor;
+            }
+        }
+
+        return nullptr;
+    }
+}
+
 TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleCommand(const FString& CommandType, const TSharedPtr<FJsonObject>& Params)
 {
     // Actor manipulation commands
@@ -59,6 +87,18 @@ TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleCommand(const FStrin
     else if (CommandType == TEXT("set_actor_transform"))
     {
         return HandleSetActorTransform(Params);
+    }
+    else if (CommandType == TEXT("set_actor_label"))
+    {
+        return HandleSetActorLabel(Params);
+    }
+    else if (CommandType == TEXT("get_actor_bounds"))
+    {
+        return HandleGetActorBounds(Params);
+    }
+    else if (CommandType == TEXT("save_level"))
+    {
+        return HandleSaveLevel(Params);
     }
     // Blueprint actor spawning
     else if (CommandType == TEXT("spawn_blueprint_actor"))
@@ -107,7 +147,7 @@ TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleFindActorsByName(con
     TArray<TSharedPtr<FJsonValue>> MatchingActors;
     for (AActor* Actor : AllActors)
     {
-        if (Actor && Actor->GetName().Contains(Pattern))
+        if (Actor && (Actor->GetName().Contains(Pattern, ESearchCase::IgnoreCase) || Actor->GetActorLabel().Contains(Pattern, ESearchCase::IgnoreCase)))
         {
             MatchingActors.Add(FEpicUnrealMCPCommonUtils::ActorToJson(Actor));
         }
@@ -241,23 +281,19 @@ TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleDeleteActor(const TS
         return FEpicUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'name' parameter"));
     }
 
-    TArray<AActor*> AllActors;
-    UGameplayStatics::GetAllActorsOfClass(GWorld, AActor::StaticClass(), AllActors);
-    
-    for (AActor* Actor : AllActors)
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    AActor* Actor = FindActorByNameOrLabel(World, ActorName);
+    if (Actor)
     {
-        if (Actor && Actor->GetName() == ActorName)
-        {
-            // Store actor info before deletion for the response
-            TSharedPtr<FJsonObject> ActorInfo = FEpicUnrealMCPCommonUtils::ActorToJsonObject(Actor);
-            
-            // Delete the actor
-            Actor->Destroy();
-            
-            TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
-            ResultObj->SetObjectField(TEXT("deleted_actor"), ActorInfo);
-            return ResultObj;
-        }
+        // Store actor info before deletion for the response
+        TSharedPtr<FJsonObject> ActorInfo = FEpicUnrealMCPCommonUtils::ActorToJsonObject(Actor);
+
+        // Delete the actor
+        Actor->Destroy();
+
+        TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+        ResultObj->SetObjectField(TEXT("deleted_actor"), ActorInfo);
+        return ResultObj;
     }
     
     return FEpicUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Actor not found: %s"), *ActorName));
@@ -273,18 +309,8 @@ TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleSetActorTransform(co
     }
 
     // Find the actor
-    AActor* TargetActor = nullptr;
-    TArray<AActor*> AllActors;
-    UGameplayStatics::GetAllActorsOfClass(GWorld, AActor::StaticClass(), AllActors);
-    
-    for (AActor* Actor : AllActors)
-    {
-        if (Actor && Actor->GetName() == ActorName)
-        {
-            TargetActor = Actor;
-            break;
-        }
-    }
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    AActor* TargetActor = FindActorByNameOrLabel(World, ActorName);
 
     if (!TargetActor)
     {
@@ -312,6 +338,84 @@ TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleSetActorTransform(co
 
     // Return updated actor info
     return FEpicUnrealMCPCommonUtils::ActorToJsonObject(TargetActor, true);
+}
+
+TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleSetActorLabel(const TSharedPtr<FJsonObject>& Params)
+{
+    FString ActorName;
+    FString Label;
+    if (!Params->TryGetStringField(TEXT("name"), ActorName))
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'name' parameter"));
+    }
+    if (!Params->TryGetStringField(TEXT("label"), Label))
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'label' parameter"));
+    }
+
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    AActor* TargetActor = FindActorByNameOrLabel(World, ActorName);
+    if (!TargetActor)
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Actor not found: %s"), *ActorName));
+    }
+
+    TargetActor->SetActorLabel(Label, true);
+
+    FString FolderPath;
+    if (Params->TryGetStringField(TEXT("folder_path"), FolderPath))
+    {
+        TargetActor->SetFolderPath(*FolderPath);
+    }
+
+    return FEpicUnrealMCPCommonUtils::ActorToJsonObject(TargetActor, true);
+}
+
+TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleGetActorBounds(const TSharedPtr<FJsonObject>& Params)
+{
+    FString ActorName;
+    if (!Params->TryGetStringField(TEXT("name"), ActorName))
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'name' parameter"));
+    }
+
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    AActor* TargetActor = FindActorByNameOrLabel(World, ActorName);
+    if (!TargetActor)
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Actor not found: %s"), *ActorName));
+    }
+
+    FVector Origin;
+    FVector Extent;
+    TargetActor->GetActorBounds(false, Origin, Extent);
+
+    TArray<TSharedPtr<FJsonValue>> OriginArray;
+    OriginArray.Add(MakeShared<FJsonValueNumber>(Origin.X));
+    OriginArray.Add(MakeShared<FJsonValueNumber>(Origin.Y));
+    OriginArray.Add(MakeShared<FJsonValueNumber>(Origin.Z));
+
+    TArray<TSharedPtr<FJsonValue>> ExtentArray;
+    ExtentArray.Add(MakeShared<FJsonValueNumber>(Extent.X));
+    ExtentArray.Add(MakeShared<FJsonValueNumber>(Extent.Y));
+    ExtentArray.Add(MakeShared<FJsonValueNumber>(Extent.Z));
+
+    TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+    ResultObj->SetObjectField(TEXT("actor"), FEpicUnrealMCPCommonUtils::ActorToJsonObject(TargetActor, true));
+    ResultObj->SetArrayField(TEXT("origin"), OriginArray);
+    ResultObj->SetArrayField(TEXT("extent"), ExtentArray);
+    ResultObj->SetNumberField(TEXT("top_z"), Origin.Z + Extent.Z);
+    ResultObj->SetNumberField(TEXT("bottom_z"), Origin.Z - Extent.Z);
+    return ResultObj;
+}
+
+TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleSaveLevel(const TSharedPtr<FJsonObject>& Params)
+{
+    const bool bSaved = FEditorFileUtils::SaveCurrentLevel();
+
+    TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+    ResultObj->SetBoolField(TEXT("saved"), bSaved);
+    return ResultObj;
 }
 
 
@@ -430,29 +534,18 @@ TSharedPtr<FJsonObject> FEpicUnrealMCPEditorCommands::HandleImportFbx(const TSha
     FEditorFileUtils::SaveDirtyPackages(false, true, true, false, false, false);
 
     TSet<FString> ImportedPaths;
-    const TArray<UObject*> ImportedObjects = Task->GetObjects();
-    for (UObject* ImportedObject : ImportedObjects)
-    {
-        if (ImportedObject)
-        {
-            ImportedPaths.Add(ImportedObject->GetPathName());
-        }
-    }
+    const FString SourceBaseName = FPaths::GetBaseFilename(SourceFbx);
+    const FString SourcePrefix = SourceBaseName + TEXT("_");
+    const TArray<FString> PostImportAssets = UEditorAssetLibrary::ListAssets(DestinationPath, true, false);
 
-    // Some automated imports can return null object handles even when assets were created.
-    if (ImportedPaths.Num() == 0)
+    // Do not inspect Task->GetObjects() here; in automated import on Linux it can
+    // contain stale pointers after save, which can crash when dereferenced.
+    for (const FString& AssetPath : PostImportAssets)
     {
-        const FString SourceBaseName = FPaths::GetBaseFilename(SourceFbx);
-        const FString SourcePrefix = SourceBaseName + TEXT("_");
-        const TArray<FString> PostImportAssets = UEditorAssetLibrary::ListAssets(DestinationPath, true, false);
-
-        for (const FString& AssetPath : PostImportAssets)
+        const FString AssetName = FPackageName::ObjectPathToObjectName(AssetPath);
+        if (AssetName.Equals(SourceBaseName) || AssetName.StartsWith(SourcePrefix))
         {
-            const FString AssetName = FPackageName::ObjectPathToObjectName(AssetPath);
-            if (AssetName.Equals(SourceBaseName) || AssetName.StartsWith(SourcePrefix))
-            {
-                ImportedPaths.Add(AssetPath);
-            }
+            ImportedPaths.Add(AssetPath);
         }
     }
 

@@ -280,3 +280,24 @@
   - Found stale actor set by pattern: `StaticMeshActor_UAID_107B441A87B625C502_*` (32 actors).
   - Deleted all 32 actors via live MCP (`delete_actor`), then verified pattern search returned zero.
   - Verified no `LV_` actor names found via MCP search and no `LV_`-prefixed content asset paths in `Content/`.
+- 2026-03-06 (save-state checkpoint: full Blender audit + clean FBX redo):
+  - Full Blender audit run against source blend:
+    - `/home/justin/Desktop/billiard assets/models/pool-table-cycles/Pool-Table-Jay-Hardy1.blend`
+    - Reports copied to `/home/justin/Desktop/BilliardsExport`:
+      - `blender_full_audit_report.md`
+      - `blender_full_audit_report.json`
+  - Findings:
+    - UCX pairing present for all 6 cushions.
+    - Ball diameters within tolerance (~5.715 cm target).
+    - Root issue confirmed: object-level placement/pivot data caused baked export offsets in UE workflow.
+  - Clean re-export pipeline executed in Blender (temporary clean-copy objects with corrected pivots, then FBX export).
+  - Fresh 5 FBX generated and verified by round-trip re-import audit:
+    - `Pool_Table.fbx`
+    - `Pool_Felt.fbx`
+    - `Pool_Cushions.fbx`
+    - `Pool_Balls.fbx`
+    - `Pool_Cue.fbx`
+    - Verify report: `/home/justin/Desktop/BilliardsExport/verify_report.json`
+    - Export metadata: `/home/justin/Desktop/BilliardsExport/reexport_report.json`
+  - Broken FBX files in `/home/justin/Desktop/BilliardsExport` were overwritten with corrected versions at ~06:03 local.
+  - Next resume step: re-import these 5 corrected FBX in strict Section 3 order and re-run Section 3.3 UCX verification immediately after cushions.
