@@ -1,8 +1,9 @@
 # rootedunreal Agent Log
 
 ## Resume Token
-- CodexResumeID: `ROOTEDUNREAL-20260306-8F51DEF`
-- Branch: `checkpoint/20260306-savepointf51def`
+- CodexResumeID: `ROOTEDUNREAL-20260306-0230E30`
+- Branch: `checkpoint/20260306-savepoint`
+- Commit: `0230e30`
 - Resume from: `Section 3 — FBX Import Procedure` (strict in-order plan execution)
 
 ## Project Identity
