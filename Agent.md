@@ -248,3 +248,22 @@
     - Bulk import settings: `/tmp/rootedunreal_import_settings_audit.json`
     - All 32 static meshes show `FbxStaticMeshImportData`: `import_uniform_scale=1.0`, `convert_scene=True`, `convert_scene_unit=False`
     - Conclusion: meshes are imported at ~1/100 scale in UE from current FBX/unit pipeline.
+- 2026-03-06 (Blender re-export overwrite, same filenames):
+  - Source blend: `/home/justin/Desktop/billiard assets/models/pool-table-cycles/Pool-Table-Jay-Hardy1.blend`
+  - Target folder: `/home/justin/Desktop/BilliardsExport`
+  - Overwritten files:
+    - `Pool_Table.fbx`
+    - `Pool_Felt.fbx`
+    - `Pool_Cushions.fbx`
+    - `Pool_Balls.fbx`
+    - `Pool_Cue.fbx`
+  - Automation script: `/tmp/blender_reexport_overwrite.py`
+  - Run log: `/tmp/blender_reexport_overwrite.log`
+  - Export summary: `/tmp/blender_reexport_overwrite_summary.json`
+  - Export used UE-targeted FBX settings:
+    - `global_scale=1.0`
+    - `apply_unit_scale=True`
+    - `apply_scale_options=FBX_SCALE_UNITS`
+    - `axis_forward=-Z`, `axis_up=Y`
+    - `use_selection=True`
+    - `bake_space_transform=True`
