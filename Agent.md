@@ -301,3 +301,21 @@
     - Export metadata: `/home/justin/Desktop/BilliardsExport/reexport_report.json`
   - Broken FBX files in `/home/justin/Desktop/BilliardsExport` were overwritten with corrected versions at ~06:03 local.
   - Next resume step: re-import these 5 corrected FBX in strict Section 3 order and re-run Section 3.3 UCX verification immediately after cushions.
+- 2026-03-06 (pre-export full audit gate, export paused by user):
+  - User required full Blender-side audit before any further FBX overwrite/export.
+  - Audit reports generated and copied to `/home/justin/Desktop/BilliardsExport`:
+    - `blender_audit_gate_preexport.json`
+    - `blender_audit_gate_full.md`
+    - `blender_audit_gate_full.json`
+    - `blender_name_compliance.json`
+  - Audit summary:
+    - PASS: units metric scale 1.0, packed images 0, absolute image paths 0.
+    - PASS: transforms applied on all mesh objects.
+    - PASS: UV0/UV1 presence and UV1 repack pass after autofix.
+    - PASS: UCX pairing complete, no missing/orphan/non-convex UCX.
+    - PASS: table felt dimension target ~224x112 cm; balls remain within expected diameter tolerance.
+    - REMAINING: 8 non-manifold visual meshes (`table_base`, `table_frame`, and 6 pocket meshes).
+    - NAMING NOTE: mesh data-block names are still inconsistent on multiple objects (object names are stable; data names can be normalized later if desired).
+  - Export status after this gate:
+    - Did NOT overwrite `/home/justin/Desktop/BilliardsExport/Pool_*.fbx` after user stop; files remain timestamped `2026-03-06 06:03`.
+  - Next action is blocked pending user go-ahead to export from audited state.
