@@ -344,3 +344,12 @@
   - Verification:
     - Headless boot check reached editor initialization, asset registry scan, MCP startup/shutdown, and clean engine exit without DDC fatal.
     - No recurrence of `DerivedDataBackendGraph` fatal in `/tmp/rootedunreal_ddc_bootcheck.log`.
+- 2026-03-06 (DDC stability + Android suppression hardening):
+  - `DefaultEngine.ini` kept local filesystem-only DDC graph and removed Android file server runtime section.
+  - `rootedunreal.uproject` plugins updated:
+    - `AndroidFileServer` -> `Enabled: false`
+    - `AndroidFileServerEditor` -> `Enabled: false`
+  - Second headless boot validation (`UnrealEditor-Cmd`) reached full editor init without DDC crash signature and processed `Cmd: QUIT`.
+  - Verification checks:
+    - `/tmp/rootedunreal_ddc_bootcheck2.log` contains no `Unable to use default cache graph` or DDC fatal.
+    - `Config/DefaultEngine.ini` no longer contains `AndroidFileServerRuntimeSettings`.

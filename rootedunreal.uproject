@@ -24,6 +24,14 @@
 			"Enabled": false
 		},
 		{
+			"Name": "AndroidFileServer",
+			"Enabled": false
+		},
+		{
+			"Name": "AndroidFileServerEditor",
+			"Enabled": false
+		},
+		{
 			"Name": "UnrealMCP",
 			"Enabled": true
 		}
