@@ -334,3 +334,13 @@
     - `/home/justin/Desktop/BilliardsExport/verify_report.json`
   - Remaining modeling caveat (non-blocking for immediate UE import/collision plan):
     - 8 visual meshes remain non-manifold (`table_base`, `table_frame`, and 6 pocket meshes).
+- 2026-03-06 (startup crash fix: DerivedDataCache graph):
+  - User-reported crash at startup: `Unable to use default cache graph 'DerivedDataBackendGraph' because there are no readable or writable nodes available`.
+  - Root cause in project config: invalid DDC root node in `Config/DefaultEngine.ini` (`Type=KeyHierarchy` + `Backends=` syntax).
+  - Fix applied in `Config/DefaultEngine.ini`:
+    - `Root=(Type=Hierarchical, Inner=LocalFileSystem)`
+    - `LocalFileSystem=(Type=FileSystem, ReadOnly=false, Clean=false, Flush=false, DeleteUnused=true, UnusedFileAge=8, FoldersToClean=-1, Path="%ENGINEVERSIONAGNOSTICUSERDIR%DerivedDataCache", EnvPathOverride=UE-LocalDataCachePath, EditorOverrideSetting=LocalDerivedDataCache, CommandLineOverride=LocalDataCachePath)`
+  - Removed Android file server runtime block from `DefaultEngine.ini` again per desktop/Linux-only requirement.
+  - Verification:
+    - Headless boot check reached editor initialization, asset registry scan, MCP startup/shutdown, and clean engine exit without DDC fatal.
+    - No recurrence of `DerivedDataBackendGraph` fatal in `/tmp/rootedunreal_ddc_bootcheck.log`.
