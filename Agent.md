@@ -14,18 +14,19 @@
 - Platform target: Desktop/Linux only
 
 ## Hard Constraints
-- Follow `/home/justin/Downloads/Billiards_Game_Plan_v3.docx` step-by-step.
-- Keep project Blueprint-only per guide section 2.1 (`C++=NO`).
+- Follow `/home/justin/Downloads/Billiards_Game_Plan_v4.docx` step-by-step.
+- Project is now C++-capable (runtime module added) while still following the same gameplay plan order.
 - Keep Interchange disabled before any import.
 - Run import/setup actions one step at a time with verification before the next step.
 
 ## Source Inputs
-- Guide: `/home/justin/Downloads/Billiards_Game_Plan_v3.docx`
+- Active guide: `/home/justin/Downloads/Billiards_Game_Plan_v4.docx`
+- Superseded guide: `/home/justin/Downloads/Billiards_Game_Plan_v3.docx` (do not use for new steps)
 - FBX export folder (5 files): `/home/justin/Desktop/BilliardsExport`
 - Ball textures folder: `/home/justin/Desktop/billiard assets/wip`
 
 ## Git
-- Branch: `main`
+- Branch: `phase1-step4-7`
 - Remote `origin`: `git@github.com:jmerkin1234/rootedunreal.git`
 
 ## Guide Verification Status
@@ -47,7 +48,8 @@
 
 ### Section 2 (Creation & Setup)
 - [x] **2.1 Project type and baseline**
-  - `.uproject` has **no `Modules` block** (Blueprint-only).
+  - `.uproject` includes runtime module `rootedunreal` (C++-capable project).
+  - `Source/rootedunreal` module and `rootedunrealEditor` target exist and build.
   - `EnhancedInput` enabled.
   - Fixed framerate + physics baseline present in config.
 - [x] **2.2 Interchange disabled (critical)**
@@ -106,6 +108,7 @@
   - `/home/justin/UnrealEngine/rootedunreal/Plugins/UnrealMCP`
 - Enabled in `.uproject` as `"UnrealMCP": true`.
 - Live connection confirmed during this session (`get_actors_in_level` success).
+- MCP command `create_enum` is now implemented in plugin source, compiled, and verified after editor restart.
 - Operating rule: keep MCP calls paced (single call, wait for completion).
 
 ## Current Phase Gate
@@ -127,6 +130,48 @@
 - Added Section 5.1 `BallCollision` custom trace channel to project config.
 - Pushed project state to GitHub `main` at commit `446946a`.
 - Removed open-level `Landscape` and all `LandscapeStreamingProxy` actors via MCP cleanup pass.
+- 2026-03-06: Plan source switched to v4 (`/home/justin/Downloads/Billiards_Game_Plan_v4.docx`).
+  - v4 introduces additional/updated logic in later sections (spin vector, rack Z verification note, foul handling extensions, cue-ball post-contact direction, and AI shot scoring penalty).
+  - Execution remains strict in-order from current checkpoint.
+- 2026-03-06: Project converted back to C++-capable by request.
+  - Added `Source/rootedunreal` runtime module (`rootedunreal.Build.cs`, `rootedunreal.cpp`, `rootedunreal.h`).
+  - Added C++ targets: `Source/rootedunreal.Target.cs`, `Source/rootedunrealEditor.Target.cs`.
+  - Updated `rootedunreal.uproject` with `Modules` block for `rootedunreal`.
+  - Verified compile success: `rootedunrealEditor` build completed with `Result: Succeeded`.
+- 2026-03-06: UnrealMCP extended with new blueprint command `create_enum`.
+  - Files updated:
+    - `Plugins/UnrealMCP/Source/UnrealMCP/Public/Commands/EpicUnrealMCPBlueprintCommands.h`
+    - `Plugins/UnrealMCP/Source/UnrealMCP/Private/Commands/EpicUnrealMCPBlueprintCommands.cpp`
+    - `Plugins/UnrealMCP/Source/UnrealMCP/Private/EpicUnrealMCPBridge.cpp`
+  - Live verification after restart:
+    - MCP `ping` returned `pong`.
+    - MCP `create_enum` succeeded for `/Game/Billiards/Enums/E_MCP_Verify_20260306`.
+  - Temporary probe enum asset was removed after verification to keep content clean.
+- 2026-03-06: Asset integrity/fix pass rerun on imported meshes.
+  - Ran `verify_cushion_ucx.py`: all six cushion meshes report `convex=1` and UCX verification passed.
+  - Ran `post_import_collision_setup.py`: reapplied Section 3.4 collision rules across 26 meshes.
+  - Cleaned regenerated off-plan files:
+    - `Content/Untitled.umap`
+    - `Content/Untitled_HLOD0_Instancing.uasset`
+    - `Content/__ExternalActors__/Untitled`
+    - `Content/__ExternalObjects__/Untitled`
+    - `Content/Blueprints/` (root-level off-plan folder)
+- 2026-03-06: Placed imported meshes into active `Untitled` level via MCP `spawn_actor`.
+  - Actor prefix used: `PL_`
+  - Placed set:
+    - Table assembly meshes (base/frame/felt/cushions/pockets)
+    - Cue mesh
+    - Ball meshes `Pool_Balls_ball0` through `Pool_Balls_ball15`
+  - Ball placement layout: 8x2 grid for visibility/selection.
+- 2026-03-06: Created persistent preview level to avoid temporary `Untitled` visibility issues.
+  - New level asset: `/Game/Billiards/Levels/L_AssetPreview`
+  - Level save verified (`saved=True`) with 32 placed actors.
+  - Actor label prefix in this level: `LV_`
+- 2026-03-06: Created Untitled-style lit preview level per visibility request.
+  - New level asset: `/Game/Billiards/Levels/L_AssetPreview_Lit`
+  - Created from template: `/Engine/Maps/Templates/OpenWorld`
+  - Landscape actors removed after template creation; billiards assets placed with `LV_` labels.
+  - Level save verified (`saved=True`), actor_count=105 (template lighting/environment + placed assets).
 
 ## Verification Commands Used
 - Config check: `sed -n` on `Config/DefaultEngine.ini`
@@ -167,3 +212,39 @@
   - MCP `find_actors_by_name("Landscape")` initially returned `Landscape` + 64 `LandscapeStreamingProxy` actors.
   - Deleted all landscape actors.
   - Final verification: `find_actors_by_name("Landscape")` returned `0` actors.
+- 2026-03-06 (C++ + MCP verification):
+  - Build command: `"/unrealengine/Engine/Build/BatchFiles/Linux/Build.sh" rootedunrealEditor Linux Development "/home/justin/UnrealEngine/rootedunreal/rootedunreal.uproject" -waitmutex`
+  - MCP live checks via socket on `127.0.0.1:55557`:
+    - `{"type":"ping","params":{}}`
+    - `{"type":"create_enum","params":{"name":"E_MCP_Verify_20260306","path":"/Game/Billiards/Enums","values":["Pending","Active","Done"]}}`
+- 2026-03-06 (asset fix verification):
+  - UCX verify log: `/tmp/rootedunreal_verify_ucx_now.log`
+  - Collision pass log: `/tmp/rootedunreal_post_collision_now.log`
+- 2026-03-06 (pre-reexport dual audit: Blender + UE):
+  - Blender audit artifacts:
+    - Script: `/tmp/blender_billiards_audit.py`
+    - JSON: `/tmp/blender_billiards_audit.json`
+    - Log: `/tmp/blender_billiards_audit.log`
+  - Blender checks:
+    - PASS: table/felt/cushions/cue/balls present
+    - PASS: UCX cushion collision objects present (`UCX_cushion_*`)
+    - PASS: transforms applied (scale/rotation)
+    - PASS: source dimensions at target scale (felt ~224x112 cm, ball diameter ~5.715 cm)
+    - FAIL (expected for collision-only meshes): UV check flags only `UCX_cushion_*` objects (6)
+  - UE audit artifacts:
+    - Script: `/tmp/rootedunreal_asset_audit.py`
+    - JSON: `/tmp/rootedunreal_asset_audit.json`
+    - Text: `/tmp/rootedunreal_asset_audit.txt`
+    - Log: `/tmp/rootedunreal_asset_audit_run.log`
+  - UE checks:
+    - PASS: `cushion_ucx_convex_present`
+    - PASS: `balls_simple_sphere_collision_only`
+    - PASS: `cue_no_collision`
+    - PASS: `felt_complex_as_simple`
+    - FAIL: felt size target check (measured ~2.24x1.12 cm instead of 224x112 cm)
+    - FAIL: ball diameter target check (measured ~0.057 cm instead of 5.715 cm)
+  - Root cause verification (UE import-data):
+    - Probe logs: `/tmp/rootedunreal_import_scale_probe.log`, `/tmp/rootedunreal_import_scale_probe2.log`
+    - Bulk import settings: `/tmp/rootedunreal_import_settings_audit.json`
+    - All 32 static meshes show `FbxStaticMeshImportData`: `import_uniform_scale=1.0`, `convert_scene=True`, `convert_scene_unit=False`
+    - Conclusion: meshes are imported at ~1/100 scale in UE from current FBX/unit pipeline.
