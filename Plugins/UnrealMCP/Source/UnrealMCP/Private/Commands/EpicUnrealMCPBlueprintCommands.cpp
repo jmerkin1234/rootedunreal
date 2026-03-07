@@ -113,93 +113,216 @@ TSharedPtr<FJsonObject> FEpicUnrealMCPBlueprintCommands::HandleCommand(const FSt
 
 TSharedPtr<FJsonObject> FEpicUnrealMCPBlueprintCommands::HandleCreateBlueprint(const TSharedPtr<FJsonObject>& Params)
 {
-    // Get required parameters
     FString BlueprintName;
     if (!Params->TryGetStringField(TEXT("name"), BlueprintName))
     {
         return FEpicUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'name' parameter"));
     }
 
-    // Check if blueprint already exists
-    FString PackagePath = TEXT("/Game/Blueprints/");
-    FString AssetName = BlueprintName;
-    if (UEditorAssetLibrary::DoesAssetExist(PackagePath + AssetName))
+    BlueprintName = BlueprintName.TrimStartAndEnd();
+    if (BlueprintName.IsEmpty())
     {
-        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Blueprint already exists: %s"), *BlueprintName));
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Blueprint 'name' cannot be empty"));
     }
 
-    // Create the blueprint factory
-    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-    
-    // Handle parent class
+    FString PackagePath = TEXT("/Game/Blueprints");
+    Params->TryGetStringField(TEXT("path"), PackagePath);
+    PackagePath = PackagePath.TrimStartAndEnd();
+
+    // Allow passing a full object path in the name field, e.g. /Game/Billiards/Blueprints/Actors/BP_Ball
+    if (BlueprintName.Contains(TEXT("/")))
+    {
+        FString NamePath;
+        FString NameLeaf;
+        if (BlueprintName.Split(TEXT("/"), &NamePath, &NameLeaf, ESearchCase::IgnoreCase, ESearchDir::FromEnd))
+        {
+            if (!NamePath.IsEmpty())
+            {
+                PackagePath = NamePath;
+            }
+            BlueprintName = NameLeaf;
+        }
+    }
+
+    // Strip object suffix if caller passes Asset.Asset
+    if (BlueprintName.Contains(TEXT(".")))
+    {
+        FString LeftPart;
+        FString RightPart;
+        if (BlueprintName.Split(TEXT("."), &LeftPart, &RightPart, ESearchCase::IgnoreCase, ESearchDir::FromStart))
+        {
+            BlueprintName = LeftPart;
+        }
+    }
+
+    if (!PackagePath.StartsWith(TEXT("/")))
+    {
+        PackagePath = PackagePath.StartsWith(TEXT("Game/"))
+            ? FString::Printf(TEXT("/%s"), *PackagePath)
+            : FString::Printf(TEXT("/Game/%s"), *PackagePath);
+    }
+
+    while (PackagePath.EndsWith(TEXT("/")))
+    {
+        PackagePath.LeftChopInline(1);
+    }
+
+    if (!PackagePath.StartsWith(TEXT("/Game")))
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(TEXT("'path' must be under /Game"));
+    }
+
+    const FString AssetPath = PackagePath + TEXT("/") + BlueprintName;
+    if (UEditorAssetLibrary::DoesAssetExist(AssetPath))
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Blueprint already exists: %s"), *AssetPath));
+    }
+
     FString ParentClass;
     Params->TryGetStringField(TEXT("parent_class"), ParentClass);
-    
-    // Default to Actor if no parent class specified
+    ParentClass = ParentClass.TrimStartAndEnd();
+
     UClass* SelectedParentClass = AActor::StaticClass();
-    
-    // Try to find the specified parent class
+
     if (!ParentClass.IsEmpty())
     {
-        FString ClassName = ParentClass;
-        if (!ClassName.StartsWith(TEXT("A")))
+        auto TryLoadClassByPath = [](const FString& ClassPath) -> UClass*
         {
-            ClassName = TEXT("A") + ClassName;
-        }
-        
-        // First try direct StaticClass lookup for common classes
-        UClass* FoundClass = nullptr;
-        if (ClassName == TEXT("APawn"))
-        {
-            FoundClass = APawn::StaticClass();
-        }
-        else if (ClassName == TEXT("AActor"))
-        {
-            FoundClass = AActor::StaticClass();
-        }
-        else
-        {
-            // Try loading the class using LoadClass which is more reliable than FindObject
-            const FString ClassPath = FString::Printf(TEXT("/Script/Engine.%s"), *ClassName);
-            FoundClass = LoadClass<AActor>(nullptr, *ClassPath);
-            
-            if (!FoundClass)
+            if (ClassPath.IsEmpty())
             {
-                // Try alternate paths if not found
-                const FString GameClassPath = FString::Printf(TEXT("/Script/Game.%s"), *ClassName);
-                FoundClass = LoadClass<AActor>(nullptr, *GameClassPath);
+                return nullptr;
+            }
+
+            UClass* LoadedClass = LoadObject<UClass>(nullptr, *ClassPath);
+            if (LoadedClass)
+            {
+                return LoadedClass;
+            }
+
+            // Some callers pass /Script/Module.Class without class object suffix.
+            FString SuffixPath = ClassPath;
+            if (!SuffixPath.EndsWith(TEXT("_C")))
+            {
+                SuffixPath += TEXT("_C");
+                LoadedClass = LoadObject<UClass>(nullptr, *SuffixPath);
+                if (LoadedClass)
+                {
+                    return LoadedClass;
+                }
+            }
+
+            return nullptr;
+        };
+
+        UClass* FoundClass = nullptr;
+
+        // If caller already passed a full class path, try it first.
+        if (ParentClass.StartsWith(TEXT("/Script/")) || ParentClass.StartsWith(TEXT("/Game/")))
+        {
+            FoundClass = TryLoadClassByPath(ParentClass);
+
+            // Compatibility: if caller supplied /Script/Engine.AGameModeBase, also try /Script/Engine.GameModeBase
+            if (!FoundClass && ParentClass.StartsWith(TEXT("/Script/")) && ParentClass.Contains(TEXT(".A")))
+            {
+                FString LeftPart;
+                FString RightPart;
+                if (ParentClass.Split(TEXT("."), &LeftPart, &RightPart))
+                {
+                    if (RightPart.StartsWith(TEXT("A")) || RightPart.StartsWith(TEXT("U")))
+                    {
+                        const FString NoPrefixPath = LeftPart + TEXT(".") + RightPart.RightChop(1);
+                        FoundClass = TryLoadClassByPath(NoPrefixPath);
+                    }
+                }
             }
         }
 
-        if (FoundClass)
+        if (!FoundClass)
+        {
+            TArray<FString> CandidateNames;
+            CandidateNames.Add(ParentClass);
+
+            if (ParentClass.StartsWith(TEXT("A")) || ParentClass.StartsWith(TEXT("U")))
+            {
+                CandidateNames.Add(ParentClass.RightChop(1));
+            }
+            else
+            {
+                CandidateNames.Add(TEXT("A") + ParentClass);
+                CandidateNames.Add(TEXT("U") + ParentClass);
+            }
+
+            const TArray<FString> Modules = {
+                TEXT("Engine"),
+                TEXT("CoreUObject"),
+                TEXT("UMG"),
+                TEXT("Game"),
+                TEXT("rootedunreal")
+            };
+
+            for (const FString& CandidateName : CandidateNames)
+            {
+                if (FoundClass)
+                {
+                    break;
+                }
+
+                // Try fully qualified script paths first.
+                for (const FString& Module : Modules)
+                {
+                    const FString CandidatePath = FString::Printf(TEXT("/Script/%s.%s"), *Module, *CandidateName);
+                    FoundClass = TryLoadClassByPath(CandidatePath);
+                    if (FoundClass)
+                    {
+                        break;
+                    }
+                }
+
+                // Fall back to object lookup by short class name.
+                if (!FoundClass)
+                {
+                    FoundClass = FindObject<UClass>(nullptr, *CandidateName);
+                }
+            }
+        }
+
+        if (FoundClass && FKismetEditorUtilities::CanCreateBlueprintOfClass(FoundClass))
         {
             SelectedParentClass = FoundClass;
-            UE_LOG(LogTemp, Log, TEXT("Successfully set parent class to '%s'"), *ClassName);
+            UE_LOG(LogTemp, Log, TEXT("create_blueprint parent resolved: '%s' -> '%s'"), *ParentClass, *FoundClass->GetPathName());
         }
         else
         {
-            UE_LOG(LogTemp, Warning, TEXT("Could not find specified parent class '%s' at paths: /Script/Engine.%s or /Script/Game.%s, defaulting to AActor"), 
-                *ClassName, *ClassName, *ClassName);
+            UE_LOG(LogTemp, Warning, TEXT("create_blueprint parent '%s' not found/blueprintable; defaulting to AActor"), *ParentClass);
         }
     }
-    
-    Factory->ParentClass = SelectedParentClass;
 
-    // Create the blueprint
-    UPackage* Package = CreatePackage(*(PackagePath + AssetName));
-    UBlueprint* NewBlueprint = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *AssetName, RF_Standalone | RF_Public, nullptr, GWarn));
+    UPackage* Package = CreatePackage(*AssetPath);
+    if (!Package)
+    {
+        return FEpicUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Failed to create package: %s"), *AssetPath));
+    }
+
+    UBlueprint* NewBlueprint = FKismetEditorUtilities::CreateBlueprint(
+        SelectedParentClass,
+        Package,
+        FName(*BlueprintName),
+        BPTYPE_Normal,
+        UBlueprint::StaticClass(),
+        UBlueprintGeneratedClass::StaticClass(),
+        FName(TEXT("UnrealMCP_CreateBlueprint"))
+    );
 
     if (NewBlueprint)
     {
-        // Notify the asset registry
         FAssetRegistryModule::AssetCreated(NewBlueprint);
-
-        // Mark the package dirty
         Package->MarkPackageDirty();
+        UEditorAssetLibrary::SaveAsset(AssetPath, false);
 
         TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
-        ResultObj->SetStringField(TEXT("name"), AssetName);
-        ResultObj->SetStringField(TEXT("path"), PackagePath + AssetName);
+        ResultObj->SetStringField(TEXT("name"), BlueprintName);
+        ResultObj->SetStringField(TEXT("path"), AssetPath);
+        ResultObj->SetStringField(TEXT("parent_class"), SelectedParentClass ? SelectedParentClass->GetName() : TEXT("None"));
         return ResultObj;
     }
 
